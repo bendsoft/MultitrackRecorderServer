@@ -9,8 +9,10 @@ Spring Boot Application with:
 # Todo
  - Add reactive stuff to the mix
  - Speed up autoreload (maybe a restart is not required, but a autoreload only)
+ - MongoDB in docker container
+ - MongoDB sample data setup/restore
 
-# Setup
+# Dev Setup
 
 Debugging in IntelliJ \
 https://www.jetbrains.com/help/idea/spring-boot.html
