@@ -1,4 +1,4 @@
-package ch.ideadapt.springreactive.track
+package com.bendsoft.track
 
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document

@@ -1,4 +1,4 @@
-package ch.ideadapt.springreactive.track
+package com.bendsoft.track
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.PathVariable
@@ -17,14 +17,14 @@ class TrackController {
 	@RequestMapping(
 			method = [RequestMethod.GET])
 	fun getTracks(): List<Track> {
-		return repository.findAll().toList();
+		return repository.findAll().toList()
 	}
 
 	@RequestMapping(
 			"/{id}",
 			method = [RequestMethod.GET])
 	fun getTrack(@PathVariable("id") id: String): Optional<Track> {
-		return repository.findById(id);
+		return repository.findById(id)
 	}
 }
 
