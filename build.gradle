@@ -16,6 +16,7 @@ buildscript {
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-spring'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
@@ -39,6 +40,12 @@ repositories {
 	mavenCentral()
 }
 
+idea {
+	module {
+		inheritOutputDirs = false
+		outputDir = file("$buildDir/classes/kotlin/main")
+	}
+}
 
 dependencies {
 	implementation('org.springframework.boot:spring-boot-starter-data-mongodb-reactive')
@@ -46,6 +53,8 @@ dependencies {
 	implementation('com.fasterxml.jackson.module:jackson-module-kotlin')
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	runtimeOnly('org.springframework.boot:spring-boot-devtools')
 	testImplementation('org.springframework.boot:spring-boot-starter-test')
+	testImplementation('de.flapdoodle.embed:de.flapdoodle.embed.mongo')
 	testImplementation('io.projectreactor:reactor-test')
 }
