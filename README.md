@@ -9,7 +9,7 @@ Spring Boot Application with:
 # Todo
  - Add reactive stuff to the mix
  - Speed up autoreload (maybe a restart is not required, but a autoreload only)
- - MongoDB in docker container
+ - Remove MongoDB credentials from git
 
 # Dev Setup
 
@@ -23,7 +23,7 @@ MongoDB Tutorial \
 https://docs.spring.io/spring-data/mongodb/docs/2.1.2.RELEASE/reference/html/#mongodb-connectors
 
 MongoDB \
-* Install and run local mongodb server
+* `cd data && docker-compose up`
 * `./data/import.sh` to import some demo data
 
 # Run

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-mongoimport --db local --drop --collection track --jsonArray --file data/track.json
+mongoimport --username=admin --password=admin --authenticationDatabase=admin --db local --drop --collection track --jsonArray --file data/track.json
