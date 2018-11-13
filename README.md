@@ -10,7 +10,6 @@ Spring Boot Application with:
  - Add reactive stuff to the mix
  - Speed up autoreload (maybe a restart is not required, but a autoreload only)
  - MongoDB in docker container
- - MongoDB sample data setup/restore
 
 # Dev Setup
 
@@ -24,7 +23,8 @@ MongoDB Tutorial \
 https://docs.spring.io/spring-data/mongodb/docs/2.1.2.RELEASE/reference/html/#mongodb-connectors
 
 MongoDB \
-Install and run local mongodb server
+* Install and run local mongodb server
+* `./data/import.sh` to import some demo data
 
 # Run
 ./gradlew bootRun
