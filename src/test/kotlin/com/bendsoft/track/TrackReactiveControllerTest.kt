@@ -1,6 +1,7 @@
 package com.bendsoft.track
 
 import com.mongodb.MongoClient
+import com.mongodb.client.MongoCollection
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -15,20 +16,25 @@ import org.bson.Document
 class IntegrationTests {
 
 	@Autowired
-	private val client: WebTestClient? = null
+	private val webClient: WebTestClient? = null
 
 	@Autowired
 	private val mongoConfig: IMongodConfig? = null
+	var collection: MongoCollection<Document>? = null
+
+	fun createDBAndCollection(collectionName: String){
+		val mongo = MongoClient("127.0.0.1", mongoConfig!!.net().port)
+		val db = mongo.getDatabase("local")
+		db.createCollection(collectionName)
+		collection = db.getCollection(collectionName)
+	}
 
 	@Test
 	fun `Find all tracks on JSON REST endpoint`() {
-		val mongo = MongoClient("127.0.0.1", mongoConfig!!.net().port)
-		val db = mongo.getDatabase("admin")
-		db.createCollection("track")
-		val col = db.getCollection("track")
-		col.insertOne(Document("key", "val"))
+		createDBAndCollection("track")
+		collection?.insertOne(Document("key", "val"))
 
-		client!!.get().uri("/reactive/tracks")
+		webClient!!.get().uri("/reactive/tracks")
 				.accept(APPLICATION_JSON)
 				.exchange()
 				.expectStatus().is2xxSuccessful
