@@ -7,7 +7,6 @@ Spring Boot Application with:
  - Traditional RestController
 
 # Todo
- - Add reactive stuff to the mix
  - Speed up autoreload (maybe a restart is not required, but a autoreload only)
  - Remove MongoDB credentials from git
 
