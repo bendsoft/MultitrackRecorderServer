@@ -23,6 +23,7 @@ apply plugin: 'io.spring.dependency-management'
 group = 'com.bendsoft'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = 1.8
+
 compileKotlin {
 	kotlinOptions {
 		freeCompilerArgs = ["-Xjsr305=strict"]
@@ -42,6 +43,11 @@ repositories {
 
 test {
 	useJUnitPlatform()
+	// Always run tests, even when nothing changed.
+	dependsOn 'cleanTest'
+	testLogging {
+		events "passed", "skipped", "failed"
+	}
 }
 
 idea {
