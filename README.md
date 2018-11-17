@@ -1,29 +1,30 @@
-# Contents
+# Whats inside
 Spring Boot Application with:
  - Gradle Build
  - MongoDB via Repository API
- - Autoreload & IntelliJ Debugging
+ - Fast autoreload & IntelliJ Debugging
  - Kotlin ;)
  - Traditional RestController
+ - Reactive Flux Controller & Repository
 
 # Todo
- - Speed up autoreload (maybe a restart is not required, but a autoreload only)
  - Remove MongoDB credentials from git
 
 # Dev Setup
 
-Debugging in IntelliJ \
-https://www.jetbrains.com/help/idea/spring-boot.html
+## Livereload
+Default Spring restart/reload is really really slow.
 
-IntelliJ trigger Spring Autoreload \
-https://stackoverflow.com/questions/12744303/intellij-idea-java-classes-not-auto-compiling-on-save/12744431#12744431
+*HotSwapAgent* recompiles and swaps classes in running JVM, which is really really fast :) Super handy IntelliJ plugin: https://github.com/dmitry-zhuravlev/hotswap-agent-intellij-plugin. \
+Use "Save Actions" IntelliJ plugin to auto trigger recompile on save. Alternatively trigger it manually via CMD+SHIFT+F9.
 
-MongoDB Tutorial \
-https://docs.spring.io/spring-data/mongodb/docs/2.1.2.RELEASE/reference/html/#mongodb-connectors
+Browsers require Autoreload plugin, or F5.
 
-MongoDB \
+# Run
+
+## MongoDB 
 * `cd data && docker-compose up`
 * `./data/import.sh` to import some demo data
 
-# Run
-./gradlew bootRun
+## Application
+`./gradlew bootRun`
