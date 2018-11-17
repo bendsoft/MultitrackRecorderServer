@@ -7,8 +7,10 @@ Spring Boot Application with:
  - Traditional RestController
  - Reactive Flux Controller & Repository
 
+
 # Todo
  - Remove MongoDB credentials from git
+
 
 # Dev Setup
 
@@ -20,6 +22,7 @@ Use "Save Actions" IntelliJ plugin to auto trigger recompile on save. Alternativ
 
 Browsers require Autoreload plugin, or F5.
 
+
 # Run
 
 ## MongoDB 
@@ -28,3 +31,12 @@ Browsers require Autoreload plugin, or F5.
 
 ## Application
 `./gradlew bootRun`
+
+
+# Test
+
+Run tests on source file changes:
+
+`./gradlew -t test`
+
+Or use IntelliJs Junit5 test runner as usual.
