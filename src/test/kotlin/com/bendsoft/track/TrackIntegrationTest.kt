@@ -1,5 +1,6 @@
 package com.bendsoft.track
 
+import com.bendsoft.model.track.Track
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
@@ -54,7 +55,7 @@ class TrackIntegrationTest {
 
 	@BeforeEach
 	fun initDB(){
-		createDBAndCollection("track")
+		createDBAndCollection("tracks")
 	}
 
 	@AfterEach

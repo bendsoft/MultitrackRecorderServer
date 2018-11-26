@@ -1,4 +1,4 @@
-package com.bendsoft.track
+package com.bendsoft.model.track
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.PathVariable
@@ -29,4 +29,3 @@ class TrackReactiveController {
 		return repository.findById(id)
 	}
 }
-

@@ -1,4 +1,4 @@
-package com.bendsoft.track
+package com.bendsoft.model.track
 
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository

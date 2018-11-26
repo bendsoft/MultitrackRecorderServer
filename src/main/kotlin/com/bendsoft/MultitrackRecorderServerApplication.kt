@@ -6,9 +6,8 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @SpringBootApplication
 @EnableMongoRepositories
-class Application
+class MultitrackRecorderServerApplication
 
 fun main(args: Array<String>) {
-	runApplication<Application>(*args)
+	runApplication<MultitrackRecorderServerApplication>(*args)
 }
-

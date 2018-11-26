@@ -1,4 +1,4 @@
-package com.bendsoft.track
+package com.bendsoft.model.track
 
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import org.springframework.data.repository.CrudRepository
