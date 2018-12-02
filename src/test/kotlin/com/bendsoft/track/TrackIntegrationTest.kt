@@ -19,7 +19,10 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBodyList
 
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = ["spring.data.mongodb.port="])
+@SpringBootTest(
+		webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+		properties = ["spring.data.mongodb.port="]
+)
 class TrackIntegrationTest {
 
 	@Autowired
@@ -33,9 +36,10 @@ class TrackIntegrationTest {
 	private lateinit var dbOperations: MongoTemplate
 
 	fun createDBAndCollection(collectionName: String) {
-		val dbName = env.getProperty("spring.data.mongodb.database", "undefined")
+		val dbName = env.getProperty("spring.data.mongodb.database", "undefined");
 		val dbHost = env.getProperty("spring.data.mongodb.host", "undefined")
 		val client = MongoClient(dbHost, mongoConfig.net().port)
+
 		val db = client.getDatabase(dbName)
 		db.createCollection(collectionName)
 		collection = db.getCollection(collectionName)
