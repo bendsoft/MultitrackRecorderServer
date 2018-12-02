@@ -1,6 +1,6 @@
 package com.bendsoft.track
 
-import com.bendsoft.model.track.Track
+import com.bendsoft.tracks.Track
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection

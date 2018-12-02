@@ -1,7 +1,7 @@
-package com.bendsoft.model.track
+package com.bendsoft.tracks
 
+import com.bendsoft.tracks.Track
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
-import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 
 @Repository

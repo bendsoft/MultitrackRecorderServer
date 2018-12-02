@@ -1,4 +1,4 @@
-package com.bendsoft.model.track
+package com.bendsoft.tracks
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.PathVariable
@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.util.*
 
 @RestController
 @RequestMapping("/reactive/tracks")
