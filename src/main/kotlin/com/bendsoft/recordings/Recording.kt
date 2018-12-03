@@ -11,6 +11,6 @@ import java.time.LocalDate
 data class Recording (
         @Id val id: String? = null,
         val name: String = "",
-        val date: LocalDate,
-        val track: List<Track>
+        val recordingDate: LocalDate,
+        val track: List<Track> = emptyList()
 )
