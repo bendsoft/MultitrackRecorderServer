@@ -11,5 +11,5 @@ data class Track (
         @Id val id: String? = null,
         val name: String = "",
         val trackNumber: Int,
-        val channels: List<ChannelRecordingFile>
+        val channels: List<ChannelRecordingFile> = emptyList()
 )

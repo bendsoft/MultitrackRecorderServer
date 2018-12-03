@@ -20,8 +20,7 @@ import org.springframework.test.web.reactive.server.expectBodyList
 
 
 @SpringBootTest(
-		webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-		properties = ["spring.data.mongodb.port="]
+		webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
 class TrackIntegrationTest {
 
@@ -39,8 +38,8 @@ class TrackIntegrationTest {
 		val dbName = env.getProperty("spring.data.mongodb.database", "undefined");
 		val dbHost = env.getProperty("spring.data.mongodb.host", "undefined")
 		val client = MongoClient(dbHost, mongoConfig.net().port)
-
 		val db = client.getDatabase(dbName)
+
 		db.createCollection(collectionName)
 		collection = db.getCollection(collectionName)
 		dbOperations = MongoTemplate(client, dbName)
@@ -69,8 +68,8 @@ class TrackIntegrationTest {
 
 	@Test
 	fun `Find all tracks on JSON endpoint`() {
-		insert(Track(name = "Track #1"))
-		insertMany(listOf(Track(name = "Track #2"), Track(name = "Track #3")))
+		insert(Track(name = "Track #1", trackNumber = 1))
+		insertMany(listOf(Track(name = "Track #2", trackNumber = 2), Track(name = "Track #3", trackNumber = 3)))
 
 		webClient.get().uri("/reactive/tracks")
 				.accept(APPLICATION_JSON)
@@ -82,7 +81,7 @@ class TrackIntegrationTest {
 
 	@Test
 	fun `Find single track by id`() {
-		(1..3).map { Track(name = "Track #$it") }.apply { insertMany(this) }
+		(1..3).map { Track(name = "Track #$it", trackNumber = it) }.apply { insertMany(this) }
 
 		val id = dbOperations.findAll(Track::class.java).first().id
 
