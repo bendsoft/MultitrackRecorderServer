@@ -9,6 +9,6 @@ import org.springframework.data.mongodb.core.mapping.Document
 data class Channel (
         @Id val id: String? = null,
         val name: String = "",
-        val selectedChannel: Int,
+        val channelNumber: Int,
         val active: Boolean
 )
