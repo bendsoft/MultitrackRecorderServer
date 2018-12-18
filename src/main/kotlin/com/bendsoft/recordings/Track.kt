@@ -1,4 +1,4 @@
-package com.bendsoft.tracks
+package com.bendsoft.recordings
 
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.TypeAlias

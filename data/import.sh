@@ -33,3 +33,4 @@ do
     mongo --username=admin --password=admin --authenticationDatabase=admin --eval "const trackName='Track #$trackNr', trackNumber=$trackNr, channels=[$channels];" ../insert-track.js
     echo "Inserted Track Nr $trackNr"
 done
+

@@ -7,9 +7,10 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
+import javax.validation.Valid
 
 @RestController
-@RequestMapping("/reactive/recordings")
+@RequestMapping("/recordings")
 class RecordingController {
 
 	@Autowired
@@ -20,12 +21,33 @@ class RecordingController {
 		return repository.findAll();
 	}
 
-	@GetMapping("/{id}")
+	@GetMapping("/{recordingId}")
 	fun getRecording(
-			@PathVariable("id") id: String
+			@PathVariable("recordingId") recordingId: String
 	): Mono<Recording> {
-		return repository.findById(id)
+		return repository.findById(recordingId)
 	}
+
+    @PutMapping("/")
+    fun updateRecording(
+            @Valid @RequestBody recording: Recording
+    ): Mono<Recording> {
+        return repository.save(recording)
+    }
+
+    @PostMapping("/")
+    fun createRecording(
+            @Valid @RequestBody recording: Recording
+    ): Mono<Recording> {
+        return repository.save(recording)
+    }
+
+    @DeleteMapping("/{recordingId}")
+    fun deleteRecording(
+            @PathVariable("recordingId") recordingId: String
+    ): Mono<Void> {
+        return repository.deleteById(recordingId)
+    }
 
 	@GetMapping(
             path = ["/"],
@@ -37,4 +59,35 @@ class RecordingController {
         val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN)
         return repository.findAllRecordingOnDate(LocalDate.parse(recordingDate, formatter))
 	}
+
+    @GetMapping("/{recordingId}/tracks")
+    fun getTracks(
+            @PathVariable("recordingId") recordingId: String
+    ): Flux<Track> {
+        return repository.findTrackById(recordingId)
+    }
+
+    @GetMapping("/{recordingId}/track/{trackId}")
+    fun getTrack(
+            @PathVariable("recordingId") recordingId: String,
+            @PathVariable("trackId") trackId: String
+    ): Mono<Track> {
+        return repository.findAllTracks(recordingId, trackId)
+    }
+
+    @PostMapping("/{recordingId}/track")
+    fun createTrack(
+            @PathVariable("recordingId") recordingId: String,
+            @Valid @RequestBody track: Track
+    ): Mono<Recording> {
+        return repository.saveTrack(recordingId, track)
+    }
+
+    @DeleteMapping("/{recordingId}/track/{trackId}")
+    fun deleteTrack(
+            @PathVariable("recordingId") recordingId: String,
+            @PathVariable("trackId") trackId: String
+    ): Mono<Void> {
+        return repository.deleteTrackById(recordingId, trackId)
+    }
 }
