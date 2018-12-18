@@ -1,3 +1,8 @@
+conn = new Mongo();
+db = conn.getDB("admin");
+db.auth("admin", "admin");
+db = db.getSiblingDB('mtr');
+
 const injectedTrackParams = {
     trackNr: trackNumber || 0,
     name: trackName || '',
@@ -5,11 +10,9 @@ const injectedTrackParams = {
 };
 
 const channelCreator = channel => ({
-    id: null,
     filename: channel.filename,
     name: channel.name,
     channelNumber: channel.number,
-    data: null
 });
 
 const trackCreator = (tnumber, tname) => ({
