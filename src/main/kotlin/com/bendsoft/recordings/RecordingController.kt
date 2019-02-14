@@ -18,7 +18,7 @@ class RecordingController {
 
 	@GetMapping("/")
 	fun getRecordings(): Flux<Recording> {
-		return repository.findAll();
+		return repository.findAll()
 	}
 
 	@GetMapping("/{recordingId}")
@@ -63,16 +63,9 @@ class RecordingController {
     @GetMapping("/{recordingId}/tracks")
     fun getTracks(
             @PathVariable("recordingId") recordingId: String
-    ): Flux<Track> {
-        return repository.findTrackById(recordingId)
-    }
-
-    @GetMapping("/{recordingId}/track/{trackId}")
-    fun getTrack(
-            @PathVariable("recordingId") recordingId: String,
-            @PathVariable("trackId") trackId: String
-    ): Mono<Track> {
-        return repository.findAllTracks(recordingId, trackId)
+    ): Mono<List<Track>> {
+        return repository.findById(recordingId)
+                .map { it.tracks }
     }
 
     @PostMapping("/{recordingId}/track")
@@ -80,14 +73,18 @@ class RecordingController {
             @PathVariable("recordingId") recordingId: String,
             @Valid @RequestBody track: Track
     ): Mono<Recording> {
-        return repository.saveTrack(recordingId, track)
+        return repository.findById(recordingId)
+                .doOnNext { it.tracks.plus(track) }
+                .doOnNext { repository.save(it) }
     }
 
     @DeleteMapping("/{recordingId}/track/{trackId}")
     fun deleteTrack(
             @PathVariable("recordingId") recordingId: String,
             @PathVariable("trackId") trackId: String
-    ): Mono<Void> {
-        return repository.deleteTrackById(recordingId, trackId)
+    ): Mono<Recording> {
+        return repository.findById(recordingId)
+                .doOnNext { it.tracks.dropWhile { track -> track.id.equals(trackId) } }
+                .doOnNext { repository.save(it) }
     }
 }
