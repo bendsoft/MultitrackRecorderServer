@@ -34,8 +34,8 @@ class Routes (
                     GET("/{id}")
                     PUT("/{id}")
                     GET("/{id}/tracks")
-                    GET("/{recordingId}/tracks/trackId}")
-                    POST("/{id}/track}")
+                    GET("/{recordingId}/tracks/{trackId}")
+                    POST("/{id}/track")
                 }
             }
         }
