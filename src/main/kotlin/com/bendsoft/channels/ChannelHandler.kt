@@ -24,12 +24,12 @@ class ChannelHandler {
     fun stream(req: ServerRequest) =
             ok().bodyToServerSentEvents(repository.findAll())
 
-    fun create(req: ServerRequest): Mono<ServerResponse> =
+    fun create(req: ServerRequest) =
         req.bodyToMono(Channel::class.java)
                 .flatMap { repository.save(it) }
                 .flatMap { created(URI.create("/channels/$it")).build() }
 
-    fun update(req: ServerRequest): Mono<ServerResponse> =
+    fun update(req: ServerRequest) =
             repository.findById(req.pathVariable("id"))
                     .zipWith(req.bodyToMono(Channel::class.java))
                     .map { it.t1.copy(
@@ -40,7 +40,7 @@ class ChannelHandler {
                     .flatMap { repository.save(it) }
                     .flatMap { noContent().build() }
 
-    fun delete(req: ServerRequest): Mono<ServerResponse> =
+    fun delete(req: ServerRequest) =
         repository.deleteById(req.pathVariable("id"))
                 .flatMap { noContent().build() }
 }
