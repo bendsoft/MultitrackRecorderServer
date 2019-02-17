@@ -18,10 +18,24 @@ class Routes (
             "/channels".nest {
                 accept(APPLICATION_JSON).nest {
                     GET("/", channelHandler::findAll)
+                    POST("/", channelHandler::create)
+                    PUT("/{id}", channelHandler::update)
+                    DELETE("/{id}", channelHandler::delete)
                     GET("/{id}", channelHandler::findById)
                 }
                 accept(TEXT_EVENT_STREAM).nest {
                     GET("/stream", channelHandler::stream)
+                }
+            }
+            "/recordings".nest {
+                accept(APPLICATION_JSON).nest {
+                    GET("/")
+                    POST("/")
+                    GET("/{id}")
+                    PUT("/{id}")
+                    GET("/{id}/tracks")
+                    GET("/{recordingId}/tracks/trackId}")
+                    POST("/{id}/track}")
                 }
             }
         }
