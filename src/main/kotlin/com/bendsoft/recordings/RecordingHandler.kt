@@ -8,6 +8,7 @@ import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
 import org.springframework.web.reactive.function.server.bodyToServerSentEvents
 import reactor.core.publisher.Mono
+import reactor.core.publisher.toMono
 import java.net.URI
 import java.time.LocalDate
 
@@ -67,16 +68,18 @@ class RecordingHandler {
                     .switchIfEmpty(notFound().build())
 
     fun addTrackToRecording(req: ServerRequest) =
-            ok().body(repository.findById(req.pathVariable("id"))
+            repository.findById(req.pathVariable("id"))
                     .zipWith(req.bodyToMono(Track::class.java))
-                    .doOnNext { it.t1.tracks
-                            .find { track -> compareTrackToPathVariable(track, req) }
-                            ?.let { track -> throw DuplicateKeyException("Recording already has a track with number ${track.trackNumber}") }
-                            .apply { it.t1.tracks.plus(it.t2) }
+                    .doOnNext {
+                        it.t1.tracks
+                                .find { track -> compareTrackToPathVariable(track, req) }
+                                ?.let { track -> throw DuplicateKeyException("Recording already has a track with number ${track.trackNumber}") }
+                                .apply { it.t1.tracks.plus(it.t2) }
                     }
                     .map { it.t1 }
                     .doOnNext { repository.save(it) }
-                    .doOnNext { noContent().build() })
+                    .doOnNext { ok().body(noContent().build()) }
+                    .doOnError { unprocessableEntity().body(it.localizedMessage.toMono()) }
 
     fun deleteTrackByTrackNumberFromRecording(req: ServerRequest) =
             ok().body(repository.findById(req.pathVariable("id"))
