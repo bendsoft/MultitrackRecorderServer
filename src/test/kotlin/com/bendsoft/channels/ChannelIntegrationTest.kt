@@ -1,6 +1,5 @@
 package com.bendsoft.channels
 
-import com.bendsoft.recordings.Track
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.mongodb.MongoClient
 import com.mongodb.client.MongoCollection
@@ -43,11 +42,11 @@ class ChannelIntegrationTests {
         dbOperations = MongoTemplate(client, dbName)
     }
 
-    fun insert(obj: Any) {
+    fun insert(obj: Channel) {
         insertMany(listOf(obj))
     }
 
-    fun insertMany(objs: Iterable<Any>) {
+    fun insertMany(objs: Iterable<Channel>) {
         val documents: Iterable<Document> = objs
                 .map { ObjectMapper().writeValueAsString(it) }
                 .map { Document.parse(it) }

@@ -2,6 +2,7 @@ package com.bendsoft.recordings
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
@@ -56,23 +57,30 @@ class RecordingHandler {
             ok().body(repository.findById(req.pathVariable("id"))
                     .map { it.tracks })
 
-    fun findTrackInRecording(req: ServerRequest) =
+    private fun compareTrackToPathVariable(track: Track, req: ServerRequest) =
+            track.trackNumber == req.pathVariable("trackNumber").toInt()
+
+    fun findTrackByTrackNumberInRecording(req: ServerRequest) =
             repository.findById(req.pathVariable("id"))
-                    .map { it.tracks.find { track -> track.id.equals(req.pathVariable("trackId")) } }
+                    .map { it.tracks.find { track -> compareTrackToPathVariable(track, req) } }
                     .flatMap { ok().body(Mono.justOrEmpty(it), Track::class.java) }
                     .switchIfEmpty(notFound().build())
 
     fun addTrackToRecording(req: ServerRequest) =
             ok().body(repository.findById(req.pathVariable("id"))
                     .zipWith(req.bodyToMono(Track::class.java))
-                    .doOnNext { it.t1.tracks.plus(it.t2) }
+                    .doOnNext { it.t1.tracks
+                            .find { track -> compareTrackToPathVariable(track, req) }
+                            ?.let { track -> throw DuplicateKeyException("Recording already has a track with number ${track.trackNumber}") }
+                            .apply { it.t1.tracks.plus(it.t2) }
+                    }
                     .map { it.t1 }
                     .doOnNext { repository.save(it) }
                     .doOnNext { noContent().build() })
 
-    fun deleteTrackFromRecording(req: ServerRequest) =
+    fun deleteTrackByTrackNumberFromRecording(req: ServerRequest) =
             ok().body(repository.findById(req.pathVariable("id"))
-                    .doOnNext { it.tracks.dropWhile { track -> track.id.equals(req.pathVariable("trackId")) } }
+                    .doOnNext { it.tracks.dropWhile { track -> compareTrackToPathVariable(track, req) } }
                     .doOnNext { repository.save(it) }
                     .doOnNext { noContent().build() })
 }
