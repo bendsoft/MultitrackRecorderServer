@@ -2,13 +2,12 @@ package com.bendsoft.recordings
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
-import org.springframework.dao.DuplicateKeyException
+import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
 import org.springframework.web.reactive.function.server.bodyToServerSentEvents
 import reactor.core.publisher.Mono
-import reactor.core.publisher.toMono
 import java.net.URI
 import java.time.LocalDate
 
@@ -48,7 +47,7 @@ class RecordingHandler {
                         )
                     }
                     .doOnNext { repository.save(it) }
-                    .doOnNext { noContent().build() })
+                    .doOnNext { ok().build() })
 
     fun delete(req: ServerRequest) =
             ok().body(repository.deleteById(req.pathVariable("id"))
@@ -70,20 +69,27 @@ class RecordingHandler {
     fun addTrackToRecording(req: ServerRequest) =
             repository.findById(req.pathVariable("id"))
                     .zipWith(req.bodyToMono(Track::class.java))
-                    .doOnNext {
-                        it.t1.tracks
-                                .find { track -> compareTrackToPathVariable(track, req) }
-                                ?.let { track -> throw DuplicateKeyException("Recording already has a track with number ${track.trackNumber}") }
-                                .apply { it.t1.tracks.plus(it.t2) }
+                    .flatMap {
+                        val trackAlreadyExists = it.t1.tracks.find { track -> track.trackNumber == it.t2.trackNumber }
+                        if (trackAlreadyExists != null)
+                            unprocessableEntity().body(BodyInserters.fromObject(
+                                    mapOf(
+                                            "level" to "ERROR",
+                                            "message" to "Recording already has a track with number ${trackAlreadyExists.trackNumber}",
+                                            "code" to -1,
+                                            "entity" to it.t2
+                                    )
+                            ))
+                        else {
+                            it.t1.tracks.plus(it.t2)
+                            repository.save(it.t1)
+                            ok().build()
+                        }
                     }
-                    .map { it.t1 }
-                    .doOnNext { repository.save(it) }
-                    .doOnNext { ok().body(noContent().build()) }
-                    .doOnError { unprocessableEntity().body(it.localizedMessage.toMono()) }
 
     fun deleteTrackByTrackNumberFromRecording(req: ServerRequest) =
-            ok().body(repository.findById(req.pathVariable("id"))
+            repository.findById(req.pathVariable("id"))
                     .doOnNext { it.tracks.dropWhile { track -> compareTrackToPathVariable(track, req) } }
                     .doOnNext { repository.save(it) }
-                    .doOnNext { noContent().build() })
+                    .flatMap { noContent().build() }
 }

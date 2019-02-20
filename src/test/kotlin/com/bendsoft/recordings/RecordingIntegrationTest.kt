@@ -61,13 +61,13 @@ class RecordingIntegrationTest {
         webClient.get().uri("/api/recordings/$recordingId/tracks")
                 .accept(APPLICATION_JSON)
                 .exchange()
-                .expectStatus().is2xxSuccessful
+                .expectStatus().isOk
                 .expectBodyList<Track>()
                 .hasSize(2)
     }
 
     @Test
-    fun `Find single track by id`() {
+    fun `Find single track by trackNumber`() {
         val tracks = createTracks(5)
         val trackNumber = tracks[3].trackNumber
 
@@ -87,8 +87,65 @@ class RecordingIntegrationTest {
         webClient.get().uri("/api/recordings/${recordingIds[0]}/tracks/$trackNumber")
                 .accept(APPLICATION_JSON)
                 .exchange()
-                .expectStatus().is2xxSuccessful
+                .expectStatus().isOk
                 .expectBody(Track::class.java)
                 .returnResult().apply { assertEquals(4, responseBody?.trackNumber) }
+    }
+
+    @Test
+    fun `Add Track to Recording`() {
+        val tracks = createTracks(5)
+        val recordingIds = insertMany(listOf(
+                Recording(
+                        name = "Testrecording 1",
+                        recordingDate = LocalDate.now(),
+                        tracks = tracks.subList(0, 2)
+                ),
+                Recording(
+                        name = "Testrecording 2",
+                        recordingDate = LocalDate.now(),
+                        tracks = tracks.subList(0, 3)
+                )
+        ))
+
+        webClient.put().uri("/api/recordings/${recordingIds[0]}/track")
+                .accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+                .syncBody(tracks.last())
+                .exchange()
+                .expectStatus().isOk
+                .apply {
+                    webClient.get().uri("/api/recordings/${recordingIds[0]}/tracks/${tracks.last().trackNumber}")
+                            .accept(APPLICATION_JSON)
+                            .exchange()
+                            .expectStatus().isOk
+                            .expectBody(Track::class.java)
+                            .returnResult().apply { assertEquals(tracks.last().trackNumber, responseBody?.trackNumber) }
+                }
+    }
+
+    @Test
+    fun `Add Track to Recording when trackNumber already occupied should return 4xx`() {
+        val tracks = createTracks(5)
+        val recordingIds = insertMany(listOf(
+                Recording(
+                        name = "Testrecording 1",
+                        recordingDate = LocalDate.now(),
+                        tracks = tracks.subList(0, 2)
+                ),
+                Recording(
+                        name = "Testrecording 2",
+                        recordingDate = LocalDate.now(),
+                        tracks = tracks.subList(0, 3)
+                )
+        ))
+
+        webClient.put().uri("/api/recordings/${recordingIds[0]}/track")
+                .accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
+                .syncBody(tracks[0])
+                .exchange()
+                .expectStatus().is4xxClientError
+                .expectBody()
+                .returnResult()
+                .let { println(it) }
     }
 }

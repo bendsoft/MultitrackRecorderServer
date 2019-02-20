@@ -39,7 +39,7 @@ class Routes (
                     DELETE("/{id}", recordingHandler::delete)
                     GET("/{id}/tracks", recordingHandler::findAllTracksOfRecording)
                     GET("/{id}/tracks/{trackNumber}", recordingHandler::findTrackByTrackNumberInRecording)
-                    POST("/{id}/track", recordingHandler::addTrackToRecording)
+                    PUT("/{id}/track", recordingHandler::addTrackToRecording)
                     DELETE("/{id}/tracks/{trackNumber}", recordingHandler::deleteTrackByTrackNumberFromRecording)
                 }
                 accept(TEXT_EVENT_STREAM).nest {
