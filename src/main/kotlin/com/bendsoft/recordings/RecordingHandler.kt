@@ -1,8 +1,10 @@
 package com.bendsoft.recordings
 
+import com.bendsoft.shared.LEVEL
+import com.bendsoft.shared.ServerResponseMessageFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
-import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
@@ -72,14 +74,13 @@ class RecordingHandler {
                     .flatMap {
                         val trackAlreadyExists = it.t1.tracks.find { track -> track.trackNumber == it.t2.trackNumber }
                         if (trackAlreadyExists != null)
-                            unprocessableEntity().body(BodyInserters.fromObject(
-                                    mapOf(
-                                            "level" to "ERROR",
-                                            "message" to "Recording already has a track with number ${trackAlreadyExists.trackNumber}",
-                                            "code" to -1,
-                                            "entity" to it.t2
-                                    )
-                            ))
+                            ServerResponseMessageFactory.create(
+                                    status = HttpStatus.UNPROCESSABLE_ENTITY,
+                                    level = LEVEL.ERROR,
+                                    message = "Recording already has a track with number ${trackAlreadyExists.trackNumber}",
+                                    code = -1,
+                                    entity = it.t2.trackNumber
+                            )
                         else {
                             it.t1.tracks.plus(it.t2)
                             repository.save(it.t1)
