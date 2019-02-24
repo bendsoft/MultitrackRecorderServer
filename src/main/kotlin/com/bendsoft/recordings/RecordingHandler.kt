@@ -79,18 +79,21 @@ class RecordingHandler {
                                     level = LEVEL.ERROR,
                                     message = "Recording already has a track with number ${trackAlreadyExists.trackNumber}",
                                     code = -1,
-                                    entity = it.t2.trackNumber
+                                    entity = it.t2
                             )
                         else {
-                            it.t1.tracks.plus(it.t2)
-                            repository.save(it.t1)
-                            ok().build()
+                            val updatedRecording = it.t1.copy(
+                                    tracks = it.t1.tracks.plus(it.t2)
+                            )
+                            repository.save(updatedRecording)
+                                    .flatMap { ok().body(Mono.justOrEmpty(updatedRecording), Recording::class.java) }
+
                         }
                     }
 
     fun deleteTrackByTrackNumberFromRecording(req: ServerRequest) =
             repository.findById(req.pathVariable("id"))
                     .doOnNext { it.tracks.dropWhile { track -> compareTrackToPathVariable(track, req) } }
-                    .doOnNext { repository.save(it) }
+                    .doOnNext { repository.delete(it) }
                     .flatMap { noContent().build() }
 }

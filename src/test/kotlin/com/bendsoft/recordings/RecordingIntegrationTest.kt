@@ -1,6 +1,7 @@
 package com.bendsoft.recordings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -10,6 +11,8 @@ import org.springframework.data.mongodb.core.ReactiveMongoOperations
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBodyList
+import org.springframework.test.web.reactive.server.returnResult
+import reactor.test.StepVerifier
 import java.time.LocalDate
 
 
@@ -31,7 +34,7 @@ class RecordingIntegrationTest {
                     .map { it.id }
                     .block()
 
-    fun insertMany(recordings: List<Recording>): MutableList<String?> =
+    fun insertMany(recordings: List<Recording>) =
             recordingRepository.insert(recordings)
                     .map { it.id }
                     .collectList()
@@ -113,13 +116,15 @@ class RecordingIntegrationTest {
                 .syncBody(tracks.last())
                 .exchange()
                 .expectStatus().isOk
-                .apply {
-                    webClient.get().uri("/api/recordings/${recordingIds[0]}/tracks/${tracks.last().trackNumber}")
-                            .accept(APPLICATION_JSON)
-                            .exchange()
-                            .expectStatus().isOk
-                            .expectBody(Track::class.java)
-                            .returnResult().apply { assertEquals(tracks.last().trackNumber, responseBody?.trackNumber) }
+                .expectBody(Track::class.java)
+                .returnResult().apply {
+                    StepVerifier
+                            .create(recordingRepository
+                                    .findById(recordingIds[0].orEmpty())
+                                    .map { it.tracks.last() }
+                            )
+                            .expectNext(tracks.last())
+                            .verifyComplete()
                 }
     }
 
@@ -146,6 +151,5 @@ class RecordingIntegrationTest {
                 .expectStatus().is4xxClientError
                 .expectBody()
                 .returnResult()
-                .let { println(it) }
     }
 }
