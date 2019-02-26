@@ -40,7 +40,7 @@ class Routes (
                     GET("/{id}/tracks", recordingHandler::findAllTracksOfRecording)
                     GET("/{id}/tracks/{trackNumber}", recordingHandler::findTrackByTrackNumberInRecording)
                     PUT("/{id}/track", recordingHandler::addTrackToRecording)
-                    DELETE("/{id}/tracks/{trackNumber}", recordingHandler::deleteTrackByTrackNumberFromRecording)
+                    PUT("/{id}/tracks/{trackNumber}", recordingHandler::removeTrackByTrackNumberFromRecording)
                 }
                 accept(TEXT_EVENT_STREAM).nest {
                     GET("/stream", recordingHandler::stream)

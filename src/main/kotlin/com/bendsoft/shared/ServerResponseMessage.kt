@@ -3,7 +3,7 @@ package com.bendsoft.shared
 import org.springframework.http.HttpStatus
 import org.springframework.http.ReactiveHttpOutputMessage
 import org.springframework.web.reactive.function.BodyInserter
-import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.BodyInserters.fromObject
 import org.springframework.web.reactive.function.server.ServerResponse
 
 enum class LEVEL {
@@ -25,7 +25,7 @@ class ServerResponseMessageFactory {
                 code: Int,
                 entity: Any?
         ): BodyInserter<ServerResponseMessage, ReactiveHttpOutputMessage> =
-                BodyInserters.fromObject(
+                fromObject(
                         object : ServerResponseMessage {
                             override val level = level
                             override val message = message

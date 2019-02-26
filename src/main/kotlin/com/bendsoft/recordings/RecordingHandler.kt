@@ -5,6 +5,7 @@ import com.bendsoft.shared.ServerResponseMessageFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
+import org.springframework.web.reactive.function.BodyInserters.fromObject
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse.*
 import org.springframework.web.reactive.function.server.body
@@ -24,22 +25,24 @@ class RecordingHandler {
 
     fun findById(req: ServerRequest) =
             ok().body(repository.findById(req.pathVariable("id")))
+                    .switchIfEmpty(notFound().build())
 
     fun findOnDate(req: ServerRequest) =
             ok().body(repository.findAllRecordingOnDate(
                     LocalDate.parse(req.pathVariable("date"))
             ))
+                    .switchIfEmpty(notFound().build())
 
     fun stream(req: ServerRequest) =
             ok().bodyToServerSentEvents(repository.findAll())
 
     fun create(req: ServerRequest) =
-            ok().body(req.bodyToMono(Recording::class.java)
+            req.bodyToMono(Recording::class.java)
                     .doOnNext { repository.save(it) }
-                    .doOnNext { created(URI.create("/recordings/$it")).build() })
+                    .flatMap { created(URI.create("/recordings/$it")).build() }
 
     fun update(req: ServerRequest) =
-            ok().body(repository.findById(req.pathVariable("id"))
+            repository.findById(req.pathVariable("id"))
                     .zipWith(req.bodyToMono(Recording::class.java))
                     .map {
                         it.t1.copy(
@@ -48,23 +51,20 @@ class RecordingHandler {
                                 tracks = it.t1.tracks.union(it.t2.tracks).toList()
                         )
                     }
-                    .doOnNext { repository.save(it) }
-                    .doOnNext { ok().build() })
+                    .flatMap { ok().body(repository.save(it), Recording::class.java) }
 
     fun delete(req: ServerRequest) =
-            ok().body(repository.deleteById(req.pathVariable("id"))
-                    .flatMap { noContent().build() })
+            repository.deleteById(req.pathVariable("id"))
+                    .flatMap { noContent().build() }
 
     fun findAllTracksOfRecording(req: ServerRequest) =
-            ok().body(repository.findById(req.pathVariable("id"))
-                    .map { it.tracks })
-
-    private fun compareTrackToPathVariable(track: Track, req: ServerRequest) =
-            track.trackNumber == req.pathVariable("trackNumber").toInt()
+            repository.findById(req.pathVariable("id"))
+                    .flatMap { ok().body(fromObject(it.tracks)) }
+                    .switchIfEmpty(notFound().build())
 
     fun findTrackByTrackNumberInRecording(req: ServerRequest) =
             repository.findById(req.pathVariable("id"))
-                    .map { it.tracks.find { track -> compareTrackToPathVariable(track, req) } }
+                    .map { it.tracks.find { track -> track.trackNumber == req.pathVariable("trackNumber").toInt() } }
                     .flatMap { ok().body(Mono.justOrEmpty(it), Track::class.java) }
                     .switchIfEmpty(notFound().build())
 
@@ -85,15 +85,28 @@ class RecordingHandler {
                             val updatedRecording = it.t1.copy(
                                     tracks = it.t1.tracks.plus(it.t2)
                             )
-                            repository.save(updatedRecording)
-                                    .flatMap { ok().body(Mono.justOrEmpty(updatedRecording), Recording::class.java) }
-
+                            ok().body(repository.save(updatedRecording), Recording::class.java)
                         }
                     }
 
-    fun deleteTrackByTrackNumberFromRecording(req: ServerRequest) =
+    fun removeTrackByTrackNumberFromRecording(req: ServerRequest) =
             repository.findById(req.pathVariable("id"))
-                    .doOnNext { it.tracks.dropWhile { track -> compareTrackToPathVariable(track, req) } }
-                    .doOnNext { repository.delete(it) }
-                    .flatMap { noContent().build() }
+                    .flatMap {
+                        val trackNumberToDelete = req.pathVariable("trackNumber").toInt()
+                        val trackFound = it.tracks.find { track -> track.trackNumber == trackNumberToDelete }
+                        if (trackFound == null)
+                            ServerResponseMessageFactory.create(
+                                    status = HttpStatus.NOT_FOUND,
+                                    level = LEVEL.ERROR,
+                                    message = "A track with number $trackNumberToDelete could not be found in the given recording",
+                                    code = -1,
+                                    entity = it
+                            )
+                        else {
+                            val updatedRecording = it.copy(
+                                    tracks = it.tracks.minus(trackFound)
+                            )
+                            ok().body(repository.save(updatedRecording), Recording::class.java)
+                        }
+                    }
 }

@@ -98,29 +98,26 @@ class RecordingIntegrationTest {
     @Test
     fun `Add Track to Recording`() {
         val tracks = createTracks(5)
-        val recordingIds = insertMany(listOf(
-                Recording(
-                        name = "Testrecording 1",
-                        recordingDate = LocalDate.now(),
-                        tracks = tracks.subList(0, 2)
-                ),
+        val recordingId = insert(
                 Recording(
                         name = "Testrecording 2",
                         recordingDate = LocalDate.now(),
                         tracks = tracks.subList(0, 3)
                 )
-        ))
+        )
 
-        webClient.put().uri("/api/recordings/${recordingIds[0]}/track")
+        webClient.put().uri("/api/recordings/$recordingId/track")
                 .accept(APPLICATION_JSON).contentType(APPLICATION_JSON)
                 .syncBody(tracks.last())
                 .exchange()
                 .expectStatus().isOk
-                .expectBody(Track::class.java)
-                .returnResult().apply {
+                .expectBody(Recording::class.java)
+                .returnResult()
+                .apply { assertEquals(4, responseBody?.tracks?.count()) }
+                .apply {
                     StepVerifier
                             .create(recordingRepository
-                                    .findById(recordingIds[0].orEmpty())
+                                    .findById(recordingId.orEmpty())
                                     .map { it.tracks.last() }
                             )
                             .expectNext(tracks.last())
@@ -151,5 +148,33 @@ class RecordingIntegrationTest {
                 .expectStatus().is4xxClientError
                 .expectBody()
                 .returnResult()
+    }
+
+    @Test
+    fun `Remove Track from Recording`() {
+        val tracks = createTracks(5)
+        val recordingId = insert(
+                Recording(
+                        name = "Testrecording 1",
+                        recordingDate = LocalDate.now(),
+                        tracks = tracks
+                )
+        )
+
+        webClient.put().uri("/api/recordings/$recordingId/tracks/2")
+                .exchange()
+                .expectStatus().isOk
+                .expectBody(Recording::class.java)
+                .returnResult()
+                .apply { assertEquals(4, responseBody?.tracks?.count()) }
+                .apply {
+                    StepVerifier
+                            .create(recordingRepository
+                                    .findById(recordingId.orEmpty())
+                                    .map { it.tracks.count() }
+                            )
+                            .expectNext(4)
+                            .verifyComplete()
+                }
     }
 }
