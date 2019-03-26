@@ -1,5 +1,6 @@
 package com.bendsoft.recordings
 
+import com.bendsoft.channelrecordingfiles.ChannelRecordingFile
 import org.springframework.data.annotation.TypeAlias
 import org.springframework.data.mongodb.core.mapping.Document
 

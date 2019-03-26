@@ -1,13 +1,9 @@
-package com.bendsoft.recordings
-
-import org.springframework.data.annotation.Id
+package com.bendsoft.channelrecordingfiles
 
 data class ChannelRecordingFile (
-        @Id val id: String? = null,
         val filename: String,
-        val name: String,
+        val channelName: String,
         val channelNumber: Int,
-        val type: String,
         val data: ByteArray
 ) {
     override fun equals(other: Any?): Boolean {
@@ -16,21 +12,19 @@ data class ChannelRecordingFile (
 
         other as ChannelRecordingFile
 
-        if (id != other.id) return false
         if (filename != other.filename) return false
-        if (name != other.name) return false
+        if (channelName != other.channelName) return false
         if (channelNumber != other.channelNumber) return false
-        if (type != other.type) return false
+        if (!data.contentEquals(other.data)) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = id?.hashCode() ?: 0
-        result = 31 * result + filename.hashCode()
-        result = 31 * result + name.hashCode()
+        var result = filename.hashCode()
+        result = 31 * result + channelName.hashCode()
         result = 31 * result + channelNumber
-        result = 31 * result + type.hashCode()
+        result = 31 * result + data.contentHashCode()
         return result
     }
 }

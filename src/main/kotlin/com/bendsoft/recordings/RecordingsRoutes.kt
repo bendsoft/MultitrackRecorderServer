@@ -15,18 +15,18 @@ class RecordingsRoutes(
     fun recordingsRouter() = router {
         "/api/recordings".nest {
             accept(APPLICATION_JSON).nest {
+                GET("/{id}/processCommand", recorderHandler::processCommand)
                 GET("/", recordingHandler::findAll)
                 POST("/", recordingHandler::create)
                 GET("/{id}", recordingHandler::findById)
                 GET("/{id}/start", recorderHandler::start)
-                POST("/{id}/stop", recorderHandler::stop)
+                GET("/{id}/stop", recorderHandler::stop)
                 GET("/{id}/nextTrack", recorderHandler::nextTrack)
                 GET("/{date}", recordingHandler::findOnDate)
                 PUT("/{id}", recordingHandler::update)
                 DELETE("/{id}", recordingHandler::delete)
                 GET("/{id}/tracks", recordingHandler::findAllTracksOfRecording)
                 GET("/{id}/tracks/{trackNumber}", recordingHandler::findTrackByTrackNumberInRecording)
-                PUT("/{id}/track", recordingHandler::addTrackToRecording)
                 PUT("/{id}/tracks/{trackNumber}", recordingHandler::removeTrackByTrackNumberFromRecording)
             }
             accept(TEXT_EVENT_STREAM).nest {
