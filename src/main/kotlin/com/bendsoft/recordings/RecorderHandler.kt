@@ -1,8 +1,9 @@
 package com.bendsoft.recordings
 
+import com.bendsoft.channelrecordingfiles.ChannelRecordingFile
 import com.bendsoft.channels.ChannelRepository
-import com.bendsoft.shared.MessageLevel
 import com.bendsoft.shared.ErrorMessages
+import com.bendsoft.shared.MessageLevel
 import com.bendsoft.shared.ServerResponseMessageFactory
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -54,23 +55,12 @@ class RecorderHandler {
                         it.t1.copy(tracks = it.t1.tracks.plus(it.t2))
 
                         recordingRepository.save(it.t1)
-                                .flatMap {
-                                    channelsRepository
-                                            .findAll()
-                                            .collectList()
-                                    )
-                                    .flatMap { recordingChannelListTuple ->
-                                    val emptyChannelRecordingFiles = recordingChannelListTuple.t2.
-
-                                    val lastTrackCopy = recordingChannelListTuple.t1.tracks.last().copy(
-                                            channelRecordingFiles = recordingChannelListTuple.t2
-                                    )
-
-                                    lastTrackCopy.channelRecordingFiles = it.t2
+                                .flatMap { currentRecording ->
+                                    val lastTrack = currentRecording.tracks.last()
 
                                     logger.debug("before start RecordingProcess")
 
-                                    recordingProcess.start(recording.tracks.last())
+                                    recordingProcess.start(lastTrack)
 
                                     logger.debug("after start RecordingProcess")
 
@@ -80,7 +70,6 @@ class RecorderHandler {
                                             message = "Recording process started",
                                             code = 1
                                     )
-                                }
                                 }
                     }
                 }
@@ -102,7 +91,7 @@ class RecorderHandler {
                     } else {
                         it.t1.copy(tracks = it.t1.tracks.plus(it.t2))
                         recordingRepository.save(it.t1)
-                                .flatMap {recording ->
+                                .flatMap { recording ->
                                     logger.info("before start RecordingProcess")
                                     recordingProcess.start(recording.tracks.last())
                                     logger.info("after start RecordingProcess")
@@ -125,7 +114,37 @@ class RecorderHandler {
 
         recordingProcess.stop()
 
-        return ok().build()
+        return recordingRepository.findById(req.pathVariable("id"))
+                .zipWhen {
+                    channelsRepository
+                            .findAll()
+                            .collectList()
+                }
+                .flatMap {
+                    val currentRecording = it.t1
+                    val channels = it.t2
+
+                    val lastTrack = currentRecording.tracks.last()
+
+                    val channelRecordingFiles = channels.map { channel ->
+                        ChannelRecordingFile(
+                                filename = "${lastTrack.name}_${channel.name}.wav",
+                                channelName = channel.name,
+                                channelNumber = channel.channelNumber,
+                                data = byteArrayOf()
+                        )
+                    }
+
+                    val updatedTrack = lastTrack.copy(
+                            channelRecordingFiles = channelRecordingFiles.toList()
+                    )
+
+                    recordingRepository.save(currentRecording.copy(
+                            tracks = currentRecording.tracks.dropLast(1).plus(updatedTrack)
+                    ))
+
+                    ok().build()
+                }
     }
 
     fun nextTrack(req: ServerRequest): Mono<ServerResponse> =
