@@ -32,7 +32,17 @@ class AsyncTrackRecorder {
         while (recordingProcess.isRunning) {
             recordingProcess.audioLine.read(buffer, 0, buffer.size)
 
-            deinterleaveBuffer(buffer, channelBuffersFileStream)
+            deinterleaveBuffer(buffer)
+                .forEachIndexed { index, channelBytes ->
+                    if (channelBuffersFileStream.containsKey(index)) {
+                        val currentBufferStreamPair = channelBuffersFileStream.getValue(index)
+
+                        currentBufferStreamPair.first.write(channelBytes)
+                        if (currentBufferStreamPair.first.size() >= TracksRecorder.BUFFER_SIZE) {
+                            writeBufferToFile(currentBufferStreamPair)
+                        }
+                    }
+                }
         }
 
         logger.debug("before read loop defined")
@@ -42,21 +52,10 @@ class AsyncTrackRecorder {
         }
     }
 
-    private fun deinterleaveBuffer(buffer: ByteArray, channelBuffersFileStream: Map<Int, Pair<ByteArrayOutputStream, AudioInputStream>>) {
-        val audioFormat = TracksRecorder.getAudioFormat()
-
-        buffer.toList()
-            .chunked(audioFormat.channels)
-            .forEachIndexed { index, channelBytes ->
-                if (channelBuffersFileStream.containsKey(index)) {
-                    val currentBufferStreamPair = channelBuffersFileStream.getValue(index)
-
-                    currentBufferStreamPair.first.write(channelBytes.toByteArray())
-                    if (currentBufferStreamPair.first.size() >= TracksRecorder.BUFFER_SIZE) {
-                        writeBufferToFile(currentBufferStreamPair)
-                    }
-                }
-            }
+    private fun deinterleaveBuffer(buffer: ByteArray): List<ByteArray> {
+        return buffer.toList()
+            .chunked(TracksRecorder.getAudioFormat().channels)
+            .map { it.toByteArray() }
     }
 
     private fun writeBufferToFile(currentBufferStreamPair: Pair<ByteArrayOutputStream, AudioInputStream>) {
