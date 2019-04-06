@@ -4,33 +4,91 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
+import java.io.ByteArrayOutputStream
+import java.io.File
+import javax.sound.sampled.*
 
 @Component
 class AsyncTrackRecorder {
     private val logger = LoggerFactory.getLogger(AsyncTrackRecorder::class.java)
 
     @Async
-    fun recordTrack(runningRecording: Process, track: Track) {
-        logger.debug("before bufferReader defined")
+    fun recordTrack(recordingProcess: RecordingProcess, track: Track) {
+        val audioFormat = TracksRecorder.getAudioFormat()
+        val channelBuffersFileStream: Map<Int, Pair<ByteArrayOutputStream, AudioInputStream>> =
+            track.channelRecordingFiles.map {
+                it.channelNumber to Pair(
+                    ByteArrayOutputStream(),
+                    AudioSystem.getAudioInputStream(
+                        File("C:/data/${it.filename}")
+                    )
+                )
+            }.toMap()
 
-        runningRecording
-            .inputStream
-            .bufferedReader()
-            .lines()
-            .forEach { println(it) }
+        val buffer = ByteArray(audioFormat.frameSize)
 
-        logger.debug("after bufferReader defined")
+        logger.debug("before read loop defined")
+
+        while (recordingProcess.isRunning) {
+            recordingProcess.audioLine.read(buffer, 0, buffer.size)
+
+            deinterleaveBuffer(buffer, channelBuffersFileStream)
+        }
+
+        logger.debug("before read loop defined")
+
+        channelBuffersFileStream.forEach {
+            writeBufferToFile(it.value)
+        }
+    }
+
+    private fun deinterleaveBuffer(buffer: ByteArray, channelBuffersFileStream: Map<Int, Pair<ByteArrayOutputStream, AudioInputStream>>) {
+        val audioFormat = TracksRecorder.getAudioFormat()
+
+        buffer.toList()
+            .chunked(audioFormat.channels)
+            .forEachIndexed { index, channelBytes ->
+                if (channelBuffersFileStream.containsKey(index)) {
+                    val currentBufferStreamPair = channelBuffersFileStream.getValue(index)
+
+                    currentBufferStreamPair.first.write(channelBytes.toByteArray())
+                    if (currentBufferStreamPair.first.size() >= TracksRecorder.BUFFER_SIZE) {
+                        writeBufferToFile(currentBufferStreamPair)
+                    }
+                }
+            }
+    }
+
+    private fun writeBufferToFile(currentBufferStreamPair: Pair<ByteArrayOutputStream, AudioInputStream>) {
+        AudioSystem.write(currentBufferStreamPair.second, TracksRecorder.FILE_TYPE, currentBufferStreamPair.first)
     }
 }
 
 interface RecordingProcess {
     var isRunning: Boolean
+    val audioLine: TargetDataLine
     fun start(track: Track)
     fun stop()
 }
 
 @Component
-class RecordingProcessFactory {
+class TracksRecorder {
+    companion object {
+        const val BUFFER_SIZE = 4096
+        val FILE_TYPE: AudioFileFormat.Type = AudioFileFormat.Type.WAVE
+
+        fun getAudioFormat(): AudioFormat {
+            val sampleRate = 48000f
+            val sampleSizeInBits = 24
+            val channels = 16
+            val signed = true
+            val bigEndian = false
+            return AudioFormat(
+                sampleRate, sampleSizeInBits, channels, signed, bigEndian
+            )
+        }
+    }
+
     private val logger = LoggerFactory.getLogger(RecordingProcess::class.java)
 
     @Autowired
@@ -39,24 +97,32 @@ class RecordingProcessFactory {
     fun create() = object : RecordingProcess {
         override var isRunning = false
 
-        private lateinit var runningRecording: Process
+        val format: AudioFormat = TracksRecorder.getAudioFormat()
+        override val audioLine: TargetDataLine = AudioSystem.getTargetDataLine(format)
 
         override fun start(track: Track) {
             logger.info("run recording-process")
             isRunning = true
 
-            runningRecording = ProcessBuilder()
-                    .command(listOf("ping", "192.168.1.1", "-t"))
-                    .start()
+            val info = DataLine.Info(TargetDataLine::class.java, format)
 
-            trackRecorder.recordTrack(runningRecording, track)
+            // checks if system supports the data line
+            if (!AudioSystem.isLineSupported(info)) {
+                throw LineUnavailableException(
+                    "The system does not support the specified format.")
+            }
+
+            audioLine.open(format)
+            audioLine.start()
+
+            trackRecorder.recordTrack(this, track)
+
             logger.info("Process started")
         }
 
         override fun stop() {
             logger.info("stop called")
             if (isRunning) {
-                runningRecording.destroy()
                 isRunning = false
                 logger.info("process has been stopped")
             }
