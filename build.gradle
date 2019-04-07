@@ -18,7 +18,7 @@ apply plugin: 'kotlin-spring'
 apply plugin: 'idea'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
-
+apply plugin: 'kotlin-kapt'
 
 group = 'com.bendsoft'
 version = '0.0.1-SNAPSHOT'
@@ -69,4 +69,5 @@ dependencies {
 	testImplementation('org.springframework.boot:spring-boot-starter-test')
 	testImplementation("org.junit.jupiter:junit-jupiter-api")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+	kapt("org.springframework.boot:spring-boot-configuration-processor")
 }

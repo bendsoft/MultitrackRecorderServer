@@ -2,6 +2,7 @@ package com.bendsoft.recordings
 
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
@@ -12,6 +13,9 @@ import javax.sound.sampled.*
 class AsyncTrackRecorder {
     private val logger = LoggerFactory.getLogger(AsyncTrackRecorder::class.java)
 
+    @Value("\${mtr.save-location}")
+    private lateinit var saveLocation: String
+
     @Async
     fun recordTrack(recordingProcess: RecordingProcess, track: Track) {
         val audioFormat = TracksRecorder.getAudioFormat()
@@ -20,7 +24,7 @@ class AsyncTrackRecorder {
                 it.channelNumber to Pair(
                     ByteArrayOutputStream(),
                     AudioSystem.getAudioInputStream(
-                        File("C:/data/${it.filename}")
+                        File("$saveLocation/${it.filename}")
                     )
                 )
             }.toMap()
