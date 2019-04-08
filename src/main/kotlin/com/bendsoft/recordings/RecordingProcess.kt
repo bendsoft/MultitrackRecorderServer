@@ -1,30 +1,34 @@
 package com.bendsoft.recordings
 
+import com.bendsoft.shared.MtrProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.sound.sampled.*
+import javax.sound.sampled.AudioSystem.getMixerInfo
 
 @Component
 class AsyncTrackRecorder {
     private val logger = LoggerFactory.getLogger(AsyncTrackRecorder::class.java)
 
-    @Value("\${mtr.save-location}")
-    private lateinit var saveLocation: String
+    @Autowired
+    private lateinit var properties: MtrProperties
 
     @Async
-    fun recordTrack(recordingProcess: RecordingProcess, track: Track) {
-        val audioFormat = TracksRecorder.getAudioFormat()
+    fun recordTrack(recordingProcess: RecordingProcess, track: Track, audioFormat: AudioFormat) {
+        if (properties.recorder.saveLocation == null) {
+            throw NullPointerException("Property mtr.recorder.saveLocation must be set")
+        }
+
         val channelBuffersFileStream: Map<Int, Pair<ByteArrayOutputStream, AudioInputStream>> =
             track.channelRecordingFiles.map {
                 it.channelNumber to Pair(
                     ByteArrayOutputStream(),
                     AudioSystem.getAudioInputStream(
-                        File("$saveLocation/${it.filename}")
+                        File("${properties.recorder.saveLocation}/${it.filename}")
                     )
                 )
             }.toMap()
@@ -36,13 +40,13 @@ class AsyncTrackRecorder {
         while (recordingProcess.isRunning) {
             recordingProcess.audioLine.read(buffer, 0, buffer.size)
 
-            deinterleaveBuffer(buffer)
+            deinterleaveBuffer(buffer, audioFormat)
                 .forEachIndexed { index, channelBytes ->
                     if (channelBuffersFileStream.containsKey(index)) {
                         val currentBufferStreamPair = channelBuffersFileStream.getValue(index)
 
                         currentBufferStreamPair.first.write(channelBytes)
-                        if (currentBufferStreamPair.first.size() >= TracksRecorder.BUFFER_SIZE) {
+                        if (currentBufferStreamPair.first.size() >= properties.recorder.bufferSize) {
                             writeBufferToFile(currentBufferStreamPair)
                         }
                     }
@@ -56,14 +60,14 @@ class AsyncTrackRecorder {
         }
     }
 
-    private fun deinterleaveBuffer(buffer: ByteArray): List<ByteArray> {
+    private fun deinterleaveBuffer(buffer: ByteArray, audioFormat: AudioFormat): List<ByteArray> {
         return buffer.toList()
-            .chunked(TracksRecorder.getAudioFormat().channels)
+            .chunked(audioFormat.channels)
             .map { it.toByteArray() }
     }
 
     private fun writeBufferToFile(currentBufferStreamPair: Pair<ByteArrayOutputStream, AudioInputStream>) {
-        AudioSystem.write(currentBufferStreamPair.second, TracksRecorder.FILE_TYPE, currentBufferStreamPair.first)
+        AudioSystem.write(currentBufferStreamPair.second, properties.recorder.fileType, currentBufferStreamPair.first)
     }
 }
 
@@ -76,36 +80,27 @@ interface RecordingProcess {
 
 @Component
 class TracksRecorder {
-    companion object {
-        const val BUFFER_SIZE = 4096
-        val FILE_TYPE: AudioFileFormat.Type = AudioFileFormat.Type.WAVE
-
-        fun getAudioFormat(): AudioFormat {
-            val sampleRate = 48000f
-            val sampleSizeInBits = 24
-            val channels = 16
-            val signed = true
-            val bigEndian = false
-            return AudioFormat(
-                sampleRate, sampleSizeInBits, channels, signed, bigEndian
-            )
-        }
-    }
-
     private val logger = LoggerFactory.getLogger(RecordingProcess::class.java)
 
     @Autowired
     private lateinit var trackRecorder: AsyncTrackRecorder
 
+    @Autowired
+    private lateinit var properties: MtrProperties
+
     fun create() = object : RecordingProcess {
         override var isRunning = false
 
-        val format: AudioFormat = TracksRecorder.getAudioFormat()
+        val format: AudioFormat = getAudioFormat()
         override val audioLine: TargetDataLine = AudioSystem.getTargetDataLine(format)
 
         override fun start(track: Track) {
-            logger.info("run recording-process")
             isRunning = true
+
+            logger.info("available mixers")
+            getMixerInfo().forEach {
+                logger.info(it.toString())
+            }
 
             val info = DataLine.Info(TargetDataLine::class.java, format)
 
@@ -118,7 +113,8 @@ class TracksRecorder {
             audioLine.open(format)
             audioLine.start()
 
-            trackRecorder.recordTrack(this, track)
+            logger.info("run recording-process")
+            trackRecorder.recordTrack(this, track, format)
 
             logger.info("Process started")
         }
@@ -130,5 +126,15 @@ class TracksRecorder {
                 logger.info("process has been stopped")
             }
         }
+    }
+
+    private fun getAudioFormat(): AudioFormat {
+        return AudioFormat(
+            properties.recorder.sampleRate,
+            properties.recorder.sampleSizeInBits,
+            properties.recorder.channels,
+            properties.recorder.signed,
+            properties.recorder.bigEndian
+        )
     }
 }
