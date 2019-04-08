@@ -37,18 +37,24 @@ class AsyncTrackRecorder {
 
         logger.debug("before read loop defined")
 
+        var fileInputStream: AudioInputStream
+        var audioOutputStream = ByteArrayOutputStream()
+        val isMaxBufferSizeExceeded: (ByteArray) -> Boolean =
+            { bytesToAdd -> audioOutputStream.size() + bytesToAdd.size >= properties.recorder.bufferSize }
+
         while (recordingProcess.isRunning) {
             recordingProcess.audioLine.read(buffer, 0, buffer.size)
 
             deinterleaveBuffer(buffer, audioFormat)
                 .forEachIndexed { index, channelBytes ->
                     if (channelBuffersFileStream.containsKey(index)) {
-                        val currentBufferStreamPair = channelBuffersFileStream.getValue(index)
+                        audioOutputStream = channelBuffersFileStream.getValue(index).first
+                        fileInputStream = channelBuffersFileStream.getValue(index).second
 
-                        currentBufferStreamPair.first.write(channelBytes)
-                        if (currentBufferStreamPair.first.size() >= properties.recorder.bufferSize) {
-                            writeBufferToFile(currentBufferStreamPair)
+                        if (isMaxBufferSizeExceeded(channelBytes)) {
+                            writeBufferToFile(audioOutputStream, fileInputStream)
                         }
+                        audioOutputStream.write(channelBytes)
                     }
                 }
         }
@@ -56,7 +62,7 @@ class AsyncTrackRecorder {
         logger.debug("before read loop defined")
 
         channelBuffersFileStream.forEach {
-            writeBufferToFile(it.value)
+            writeBufferToFile(it.value.first, it.value.second)
         }
     }
 
@@ -66,8 +72,9 @@ class AsyncTrackRecorder {
             .map { it.toByteArray() }
     }
 
-    private fun writeBufferToFile(currentBufferStreamPair: Pair<ByteArrayOutputStream, AudioInputStream>) {
-        AudioSystem.write(currentBufferStreamPair.second, properties.recorder.fileType, currentBufferStreamPair.first)
+    @Async
+    fun writeBufferToFile(buffer: ByteArrayOutputStream, fileInputStream: AudioInputStream) {
+        AudioSystem.write(fileInputStream, properties.recorder.fileType, buffer)
     }
 }
 
