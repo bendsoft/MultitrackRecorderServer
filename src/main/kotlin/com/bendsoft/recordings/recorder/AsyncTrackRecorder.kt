@@ -1,5 +1,6 @@
-package com.bendsoft.recordings
+package com.bendsoft.recordings.recorder
 
+import com.bendsoft.recordings.Track
 import com.bendsoft.shared.MtrProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -7,8 +8,9 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
 import java.io.File
-import javax.sound.sampled.*
-import javax.sound.sampled.AudioSystem.getMixerInfo
+import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioInputStream
+import javax.sound.sampled.AudioSystem
 
 @Component
 class AsyncTrackRecorder {
@@ -17,7 +19,6 @@ class AsyncTrackRecorder {
     @Autowired
     private lateinit var properties: MtrProperties
 
-    private val frameSizeBufferMultiplier = 10
     private lateinit var audioFormat: AudioFormat
 
     @Async
@@ -42,7 +43,8 @@ class AsyncTrackRecorder {
                 )
             }.toMap()
 
-        val buffer = ByteArray(audioFormat.frameSize * frameSizeBufferMultiplier)
+        val frameBufferSizeMultiplier = 10
+        val frameBuffer = ByteArray(audioFormat.frameSize * frameBufferSizeMultiplier)
 
         logger.debug("before read loop defined")
 
@@ -53,9 +55,9 @@ class AsyncTrackRecorder {
 
         recordingProcess.audioLine.start()
         while (recordingProcess.isRunning) {
-            recordingProcess.audioLine.read(buffer, 0, buffer.size)
+            recordingProcess.audioLine.read(frameBuffer, 0, frameBuffer.size)
 
-            frameList = convertToFrames(buffer, audioFormat)
+            frameList = convertToFrames(frameBuffer)
 
             channelsToRecord.forEach {
                 audioOutputStream = channelBuffers.getValue(it)
@@ -81,7 +83,7 @@ class AsyncTrackRecorder {
     private fun willMaxBufferSizeBeExceeded(audioOutputStream: ByteArrayOutputStream, bytesToAdd: ByteArray) =
         audioOutputStream.size() + bytesToAdd.size >= properties.recorder.bufferSize
 
-    private fun convertToFrames(buffer: ByteArray, audioFormat: AudioFormat): List<Frame> {
+    private fun convertToFrames(buffer: ByteArray): List<Frame> {
         return buffer.toList()
             .chunked(audioFormat.frameSize)
             .map { Frame(it, audioFormat.channels) }
@@ -90,86 +92,5 @@ class AsyncTrackRecorder {
     @Async
     fun writeBufferToFile(buffer: ByteArrayOutputStream, fileInputStream: AudioInputStream) {
         AudioSystem.write(fileInputStream, properties.recorder.fileType, buffer)
-    }
-}
-
-class Frame(
-    frameByteList: List<Byte>,
-    channels: Int
-) {
-    val samples = frameByteList
-        .chunked(channels)
-
-    fun getSample(channelNumber: Int) = samples[channelNumber]
-}
-
-interface RecordingProcess {
-    var isRunning: Boolean
-    val audioLine: TargetDataLine
-    fun start(track: Track)
-    fun stop()
-}
-
-@Component
-class TracksRecorder {
-    private val logger = LoggerFactory.getLogger(RecordingProcess::class.java)
-
-    @Autowired
-    private lateinit var trackRecorder: AsyncTrackRecorder
-
-    @Autowired
-    private lateinit var properties: MtrProperties
-
-    fun create() = object : RecordingProcess {
-        override var isRunning = false
-
-        val format: AudioFormat = getAudioFormat()
-        override val audioLine: TargetDataLine = AudioSystem.getTargetDataLine(format)
-
-        override fun start(track: Track) {
-            isRunning = true
-
-            logger.info("available mixers")
-            getMixerInfo().forEach {
-                logger.info(it.toString())
-            }
-
-            val info = DataLine.Info(TargetDataLine::class.java, format)
-
-            // checks if system supports the data line
-            if (!AudioSystem.isLineSupported(info)) {
-                throw LineUnavailableException(
-                    "The system does not support the specified format.")
-            }
-
-            audioLine.open(format)
-            audioLine.addLineListener {
-                if (it.type === LineEvent.Type.STOP || it.type === LineEvent.Type.CLOSE) {
-                    stop()
-                }
-            }
-
-            logger.info("run recording-process")
-            trackRecorder.recordTrack(this, track, format)
-            logger.info("Process started")
-        }
-
-        override fun stop() {
-            logger.info("stop called")
-            if (isRunning) {
-                isRunning = false
-                logger.info("process has been stopped")
-            }
-        }
-    }
-
-    private fun getAudioFormat(): AudioFormat {
-        return AudioFormat(
-            properties.recorder.sampleRate,
-            properties.recorder.sampleSizeInBits,
-            properties.recorder.channels,
-            properties.recorder.signed,
-            properties.recorder.bigEndian
-        )
     }
 }
