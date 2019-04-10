@@ -17,65 +17,90 @@ class AsyncTrackRecorder {
     @Autowired
     private lateinit var properties: MtrProperties
 
+    private val frameSizeBufferMultiplier = 10
+    private lateinit var audioFormat: AudioFormat
+
     @Async
     fun recordTrack(recordingProcess: RecordingProcess, track: Track, audioFormat: AudioFormat) {
         if (properties.recorder.saveLocation == null) {
             throw NullPointerException("Property mtr.recorder.saveLocation must be set")
         }
 
-        val channelBuffersFileStream: Map<Int, Pair<ByteArrayOutputStream, AudioInputStream>> =
+        this.audioFormat = audioFormat
+
+        val channelsToRecord = track.channelRecordingFiles.map { it.channelNumber }
+
+        val channelBuffers: Map<Int, ByteArrayOutputStream> =
+            channelsToRecord.map {
+                it to ByteArrayOutputStream()
+            }.toMap()
+
+        val channelFileStreams: Map<Int, AudioInputStream> =
             track.channelRecordingFiles.map {
-                it.channelNumber to Pair(
-                    ByteArrayOutputStream(),
-                    AudioSystem.getAudioInputStream(
-                        File("${properties.recorder.saveLocation}/${it.filename}")
-                    )
+                it.channelNumber to AudioSystem.getAudioInputStream(
+                    File("${properties.recorder.saveLocation}/${it.filename}")
                 )
             }.toMap()
 
-        val buffer = ByteArray(audioFormat.frameSize)
+        val buffer = ByteArray(audioFormat.frameSize * frameSizeBufferMultiplier)
 
         logger.debug("before read loop defined")
 
-        var fileInputStream: AudioInputStream
-        var audioOutputStream = ByteArrayOutputStream()
-        val isMaxBufferSizeExceeded: (ByteArray) -> Boolean =
-            { bytesToAdd -> audioOutputStream.size() + bytesToAdd.size >= properties.recorder.bufferSize }
+        var audioOutputStream: ByteArrayOutputStream
 
+        var frameList: List<Frame>
+        var channelData: ByteArray
+
+        recordingProcess.audioLine.start()
         while (recordingProcess.isRunning) {
             recordingProcess.audioLine.read(buffer, 0, buffer.size)
 
-            deinterleaveBuffer(buffer, audioFormat)
-                .forEachIndexed { index, channelBytes ->
-                    if (channelBuffersFileStream.containsKey(index)) {
-                        audioOutputStream = channelBuffersFileStream.getValue(index).first
-                        fileInputStream = channelBuffersFileStream.getValue(index).second
+            frameList = convertToFrames(buffer, audioFormat)
 
-                        if (isMaxBufferSizeExceeded(channelBytes)) {
-                            writeBufferToFile(audioOutputStream, fileInputStream)
-                        }
-                        audioOutputStream.write(channelBytes)
-                    }
+            channelsToRecord.forEach {
+                audioOutputStream = channelBuffers.getValue(it)
+
+                channelData = frameList
+                    .flatMap { frame -> frame.getSample(it) }
+                    .toByteArray()
+
+                if (willMaxBufferSizeBeExceeded(audioOutputStream, channelData)) {
+                    writeBufferToFile(audioOutputStream, channelFileStreams.getValue(it))
                 }
+                audioOutputStream.write(channelData)
+            }
         }
 
         logger.debug("before read loop defined")
 
-        channelBuffersFileStream.forEach {
-            writeBufferToFile(it.value.first, it.value.second)
+        channelBuffers.forEach {
+            writeBufferToFile(it.value, channelFileStreams.getValue(it.key))
         }
     }
 
-    private fun deinterleaveBuffer(buffer: ByteArray, audioFormat: AudioFormat): List<ByteArray> {
+    private fun willMaxBufferSizeBeExceeded(audioOutputStream: ByteArrayOutputStream, bytesToAdd: ByteArray) =
+        audioOutputStream.size() + bytesToAdd.size >= properties.recorder.bufferSize
+
+    private fun convertToFrames(buffer: ByteArray, audioFormat: AudioFormat): List<Frame> {
         return buffer.toList()
-            .chunked(audioFormat.channels)
-            .map { it.toByteArray() }
+            .chunked(audioFormat.frameSize)
+            .map { Frame(it, audioFormat.channels) }
     }
 
     @Async
     fun writeBufferToFile(buffer: ByteArrayOutputStream, fileInputStream: AudioInputStream) {
         AudioSystem.write(fileInputStream, properties.recorder.fileType, buffer)
     }
+}
+
+class Frame(
+    frameByteList: List<Byte>,
+    channels: Int
+) {
+    val samples = frameByteList
+        .chunked(channels)
+
+    fun getSample(channelNumber: Int) = samples[channelNumber]
 }
 
 interface RecordingProcess {
@@ -118,11 +143,14 @@ class TracksRecorder {
             }
 
             audioLine.open(format)
-            audioLine.start()
+            audioLine.addLineListener {
+                if (it.type === LineEvent.Type.STOP || it.type === LineEvent.Type.CLOSE) {
+                    stop()
+                }
+            }
 
             logger.info("run recording-process")
             trackRecorder.recordTrack(this, track, format)
-
             logger.info("Process started")
         }
 
