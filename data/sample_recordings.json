@@ -1,0 +1,1 @@
+{"_id":{"$oid":"5c9140fca39bc53db814504c"},"name":"Testrecording","recordingDate":{"$date":{"$numberLong":"1514764800000"}},"tracks":[{"name":"test track","trackNumber":{"$numberInt":"1"},"channelRecordingFiles":[]}]}
