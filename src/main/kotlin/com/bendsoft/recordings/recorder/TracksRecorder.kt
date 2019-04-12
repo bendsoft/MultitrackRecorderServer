@@ -17,6 +17,13 @@ class TracksRecorder {
     @Autowired
     private lateinit var properties: MtrProperties
 
+    fun checkAvailableMixers() {
+        logger.info("available mixers")
+        AudioSystem.getMixerInfo().forEach {
+            logger.info(it.toString())
+        }
+    }
+
     fun create() = object : RecordingProcess {
         override var isRunning = false
 
@@ -25,11 +32,6 @@ class TracksRecorder {
 
         override fun start(track: Track) {
             isRunning = true
-
-            logger.info("available mixers")
-            AudioSystem.getMixerInfo().forEach {
-                logger.info(it.toString())
-            }
 
             val info = DataLine.Info(TargetDataLine::class.java, format)
 

@@ -33,6 +33,7 @@ class RecorderHandler {
 
     @PostConstruct
     fun createRecordingProcessHandle() {
+        tracksRecorder.checkAvailableMixers()
         recordingProcess = tracksRecorder.create()
     }
 
